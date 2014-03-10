@@ -1,5 +1,5 @@
 #include "world.h"
-#include <unistd.h>
+//#include <unistd.h>
 
 World::World(){
   broadphase_ = new btDbvtBroadphase();
@@ -24,7 +24,7 @@ void World::addObject(){
   btCollisionShape* fallShape = new btBoxShape(btVector3(1,1,1));
 
   btQuaternion quat(0,0,0,1);
-  quat.setEuler(1.57,1.57,1.57);
+  quat.setEuler(1.57f,1.57f,1.57f);
 
   btDefaultMotionState* fallMotionState =
           new btDefaultMotionState(btTransform(quat,btVector3(0,100,0)));
@@ -106,7 +106,7 @@ void World::reset(){
     tr.setOrigin(btVector3(0,100,0));
   
     btQuaternion quat;
-    quat.setEuler(0,1.57,1.57);
+    quat.setEuler(0,1.57f,1.57f);
     tr.setRotation(quat);
   
     object->setCenterOfMassTransform(tr);
