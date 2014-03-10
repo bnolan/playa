@@ -9,36 +9,41 @@
 #include <syslog.h>
 #include <signal.h>
 #include <iostream>
+#include <assert.h>
 #include <bullet/btBulletDynamicsCommon.h>
+// #include "build/libwebsockets/lib/private-libwebsockets.h"
 #include "world.h"
-#include "build/libwebsockets/lib/libwebsockets.h"
 
 extern "C" {
+#include "build/libwebsockets/lib/libwebsockets.h"
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 }
 
-class User{
-public:
-  int32_t id;
-  std::string name;
-  
-  User(){
-    id = random();
-    name = "ready player one";
-  }
-  
-  std::string inspect(){
-    return name + std::string(" ") + std::to_string(id);
-  }
-};
-
-
-int force_exit = 0;
+#include "user.cpp"
 
 #define MAX_ECHO_PAYLOAD 1400
 #define LOCAL_RESOURCE_PATH INSTALL_DATADIR"/libwebsockets-test-server"
+
+int force_exit = 0;
+int user_id = 1;
+lua_State *L;
+
+class Object{
+  std::string modelUrl;
+  btRigidBody body;
+  LuaState *L;
+  
+  void onTouch(User sender){
+    if LuaHasFunction("touch"){
+      lua.call("touch", sender)
+    }
+  }
+  
+  
+  
+};
 
 struct per_session_data__echo {
 	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_ECHO_PAYLOAD + LWS_SEND_BUFFER_POST_PADDING];
@@ -46,18 +51,18 @@ struct per_session_data__echo {
 	unsigned int index;
 };
 
-static UpdatePacket update;
+struct per_session_data {
+  User *user;
+};
 
-static int callback_echo(
-  struct libwebsocket_context *context,
-  struct libwebsocket *wsi,
-	enum libwebsocket_callback_reasons reason, 
-	void *user,
-	void *in, 
-	size_t len
-){
-	struct per_session_data__echo *pss = (struct per_session_data__echo *)user;
+void sighandler(int sig){
+	force_exit = 1;
+}
+
+static int callback_echo(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason, void *sessionPointer, void *in, size_t len){
+	//struct per_session_data__echo *pss = (struct per_session_data__echo *)user;
 	int n;
+  struct per_session_data *session = (struct per_session_data *) sessionPointer;
 
   // UpdatePacket update;
   
@@ -65,38 +70,56 @@ static int callback_echo(
   
 	switch (reason) {
 
-  case LWS_CALLBACK_CLIENT_ESTABLISHED:{
-    void *userContext = libwebsocket_context_user(context);
-    User *user = reinterpret_cast<User*>(userContext);
-    std::cout << user->inspect() << std::endl;
+  case LWS_CALLBACK_ESTABLISHED:{
+    asset(session->user == NULL);
+    session->user = new User(user_id++);
+    std::cout << "User #" << session->user->id_ << " connected..." << std::endl;
+    break;
   }
 
+  case LWS_CALLBACK_CLOSED:{
+    assert(session->user != NULL);
+    std::cout << "User #" << session->user->id_ << " disconnected..." << std::endl;
+    delete session->user;
+    break;
+  }
+  
 	case LWS_CALLBACK_SERVER_WRITEABLE:{
 	  // LWS_WRITE_TEXT
 	  // n = libwebsocket_write(wsi, &pss->buf[LWS_SEND_BUFFER_PRE_PADDING], pss->len, LWS_WRITE_BINARY);
-	  n = libwebsocket_write(wsi, (unsigned char *) &update, sizeof(UpdatePacket), LWS_WRITE_BINARY);
-		if (n < 0) {
-			lwsl_err("ERROR %d writing to socket, hanging up\n", n);
-			return 1;
-		}
-		if (n < (int)pss->len) {
-			lwsl_err("Partial write\n");
-			return -1;
-		}
+	  // n = libwebsocket_write(wsi, (unsigned char *) &update, sizeof(UpdatePacket), LWS_WRITE_BINARY);
+
+    // if (n < 0) {
+    //  lwsl_err("ERROR %d writing to socket, hanging up\n", n);
+    //  return 1;
+    // }
+    // if (n < (int)pss->len) {
+    //  lwsl_err("Partial write\n");
+    //  return -1;
+    // }
+    break;
 	}
 
 	case LWS_CALLBACK_RECEIVE:{
-		if (len > MAX_ECHO_PAYLOAD) {
-			lwsl_err("Server received packet bigger than %u, hanging up\n", MAX_ECHO_PAYLOAD);
-			return 1;
-		}
+    // if (len > MAX_ECHO_PAYLOAD) {
+    //  lwsl_err("Server received packet bigger than %u, hanging up\n", MAX_ECHO_PAYLOAD);
+    //  return 1;
+    // }
 		
-		memcpy(&pss->buf[LWS_SEND_BUFFER_PRE_PADDING], in, len);
-		pss->len = (unsigned int)len;
-		
-    printf("Message: %s\n", in);
+    // memcpy(&pss->buf[LWS_SEND_BUFFER_PRE_PADDING], in, len);
+    // pss->len = (unsigned int)len;
+
+    std::cout << "Message recieved from user#" << session->user->id_ << std::endl;
+
+    char *message = (char *)in;
+    std::cout << message << std::endl;
+
+    luaL_dostring(L, message);
+    
+    // printf("Message: %s\n", in);
     
 		libwebsocket_callback_on_writable(context, wsi);
+    break;
 	}
 
 	default:{
@@ -115,30 +138,19 @@ static struct libwebsocket_protocols protocols[] = {
 	{
 		"default",		/* name */
 		callback_echo,		/* callback */
-		sizeof(struct per_session_data__echo)	/* per_session_data_size */
+		sizeof(struct per_session_data)	/* per_session_data_size */
 	},
 	{
 		NULL, NULL, 0		/* End of list */
 	}
 };
 
-void sighandler(int sig){
-	force_exit = 1;
-}
-
 static struct option options[] = {
 	{ "help",	no_argument,		NULL, 'h' },
 	{ "debug",	required_argument,	NULL, 'd' },
 	{ "port",	required_argument,	NULL, 'p' },
-#ifndef LWS_NO_CLIENT
-	{ "client",	required_argument,	NULL, 'c' },
-	{ "ratems",	required_argument,	NULL, 'r' },
-#endif
 	{ "ssl",	no_argument,		NULL, 's' },
 	{ "interface",  required_argument,	NULL, 'i' },
-#ifndef LWS_NO_DAEMONIZE
-	{ "daemonize", 	no_argument,		NULL, 'D' },
-#endif
 	{ NULL, 0, 0, 0 }
 };
 
@@ -194,9 +206,10 @@ int main(int argc, char **argv)
 	info.gid = -1;
 	info.uid = -1;
 	info.options = opts;
-  info.user = (void *) new User;
+  info.user = NULL; // (void *) new User;
   
-	context = libwebsocket_context(&info);
+	// context = libwebsocket_context(&info);
+	context = libwebsocket_create_context(&info);
 
 	if (context == NULL) {
 		lwsl_err("libwebsocket init failed\n");
@@ -211,7 +224,7 @@ int main(int argc, char **argv)
   
   const char* file = "setup.lua";
   
-  lua_State *L = luaL_newstate();
+  L = luaL_newstate();
 
   luaL_openlibs(L);
 
@@ -232,10 +245,11 @@ int main(int argc, char **argv)
   }
 
 	n = 0;
-	while (force_exit) { // }!force_exit) { // n >= 0 && !force_exit) {
+  force_exit = false;
+	while (!force_exit) { // }!force_exit) { // n >= 0 && !force_exit) {
 		struct timeval tv;
 
-    world->simulate();
+    // world->simulate();
     
     // if (client) {
     //  gettimeofday(&tv, NULL);
@@ -247,8 +261,7 @@ int main(int argc, char **argv)
     // }
 
     libwebsocket_callback_on_writable_all_protocol(&protocols[0]);
-
-		n = libwebsocket_service(context, 10);
+		libwebsocket_service(context, 10);
 	}
 
   report_errors(L, s);
