@@ -18,8 +18,8 @@
 #include "world.h"
 #include "user.h"
 
-#include "libwebsockets/build/lws_config.h"
-#include "libwebsockets/lib/libwebsockets.h"
+#include "libwebsockets/include/lws_config.h"
+#include "libwebsockets/include/libwebsockets.h"
 
 extern "C" {
 #include <lua.h>
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 	memset(&info, 0, sizeof info);
 
   // websockets stuff...
-	setlogmask(LOG_UPTO (LOG_DEBUG));
+	// setlogmask(LOG_UPTO (LOG_DEBUG));
 	// openlog("lwsts", syslog_options, LOG_DAEMON);
 	lws_set_log_level(debug_level, lwsl_emit_syslog);
 
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
 	libwebsocket_context_destroy(context);
 
 	lwsl_notice("libwebsockets-test-echo exited cleanly\n");
-	closelog();
+	// closelog();
 
 	return 0;
 }
