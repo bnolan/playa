@@ -4,6 +4,8 @@
 #include <iostream>
 #include <memory>
 #include <bullet/btBulletDynamicsCommon.h>
+#include <stdint.h>
+
 
 struct UpdatePacket {
   int32_t id;
