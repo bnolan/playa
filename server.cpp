@@ -96,6 +96,9 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
     
     std::vector<UpdatePacket> updates = world->update();
     
+    for(UpdatePacket update : updates){
+	    n = libwebsocket_write(wsi, (unsigned char *) &update, sizeof(UpdatePacket), LWS_WRITE_BINARY);
+    }
     
     break;
 	}

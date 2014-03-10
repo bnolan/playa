@@ -55,7 +55,7 @@ void World::addObject(){
   
 void World::simulate(){
   // simulate at half realtime.
-  dynamics_world_->stepSimulation(1/20.f,10);
+  dynamics_world_->stepSimulation(1/10.0f,10.0f);
   // dynamics_world_->stepSimulation(1/60.f,10);
 
   // btScalar yaw, pitch, roll;
@@ -82,8 +82,6 @@ std::vector<UpdatePacket> World::update(){
     update.pX = trans.getOrigin().getX();
     update.pY = trans.getOrigin().getY();
     update.pZ = trans.getOrigin().getZ();
-
-    std::cout << "height: " << trans.getOrigin().getY() << std::endl;
 
     update.rX = trans.getRotation().getX();
     update.rY = trans.getRotation().getY();
