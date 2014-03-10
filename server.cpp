@@ -168,6 +168,10 @@ int lua_world_reset(lua_State *L)
   return 0; // number of return values
 }
 
+int lua_world_add_child(lua_State *L){
+  world->addObject();
+  return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -226,6 +230,7 @@ int main(int argc, char **argv)
   luaL_openlibs(L);
 
   lua_register(L, "lua_world_reset", lua_world_reset);
+  lua_register(L, "lua_world_add_child", lua_world_add_child);
 
   // luaopen_io(L); // provides io.*
   // luaopen_base(L);
@@ -266,7 +271,7 @@ int main(int argc, char **argv)
     #ifdef _WIN32
       Sleep(100);
     #else
-      usleep(100000);
+      usleep(50000);
     #endif
 	}
 

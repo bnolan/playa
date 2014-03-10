@@ -21,6 +21,8 @@ class Renderer
     NEAR = 0.1
     FAR = 20000
 
+    @objects = {}
+    
     @scene = new THREE.Scene()
     @camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR)
     @scene.add(@camera)
@@ -48,30 +50,19 @@ class Renderer
     @scene.add(ambientLight)
 
     groundMaterial = new THREE.MeshBasicMaterial({ color: 0x003388 })
-    plane = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), groundMaterial)
+    plane = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), groundMaterial)
     plane.rotation.x = -Math.PI / 2
-    plane.position.y = 3
+    plane.position.y = -1
     plane.receiveShadow = true
     @scene.add(plane)
 
-    boxgeometry = new THREE.CubeGeometry(5, 5, 5);
-    boxmaterial = new THREE.MeshLambertMaterial({ color: 0xCCCCCC })
-
-    @cube = new THREE.Mesh(boxgeometry, boxmaterial)
-    @cube.castShadow = true
-    @cube.position.x = 0
-    @cube.position.y = 10
-    @cube.position.z = 0
-    # @cube.useQuaternion = true
-    @scene.add(@cube)
-
-    loader = new THREE.ColladaLoader()
-    loader.load './models/cheetah.dae',  (result) =>
-      console.log result
-      @model = result.scene
-      @model.scale.x = @model.scale.y = @model.scale.z = 2
-      # @model.material.overdraw = true
-      # @scene.add(@model)
+    # loader = new THREE.ColladaLoader()
+    # loader.load './models/cheetah.dae',  (result) =>
+    #   console.log result
+    #   @model = result.scene
+    #   @model.scale.x = @model.scale.y = @model.scale.z = 2
+    #   # @model.material.overdraw = true
+    #   # @scene.add(@model)
 
     @webglRenderer = new THREE.WebGLRenderer()
     @webglRenderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -84,16 +75,35 @@ class Renderer
     container.appendChild(@webglRenderer.domElement)
     # window.addEventListener('resize', onWindowResize, false)
 
+  addObject: (id) ->
+    boxgeometry = new THREE.CubeGeometry(10, 10, 10);
+    boxmaterial = new THREE.MeshLambertMaterial({ color: 0xAAAAAA })
+
+    cube = new THREE.Mesh(boxgeometry, boxmaterial)
+    cube.castShadow = true
+    cube.position.x = 0
+    cube.position.y = 10
+    cube.position.z = 0
+    cube.useQuaternion = true
+    @scene.add(cube)
+    
+    @objects[id] = cube
+    
+    cube
+
+  hasObject: (id) ->
+    !!@objects[id]
+    
   animate: =>
-    timer = Date.now() * 0.002
+    timer = Date.now() * 0.0005
     
     if @model
       @model.rotation.x = -Math.PI / 2
       @model.rotation.z += 0.1
     
-    @camera.position.x = Math.cos(timer) * 50
-    @camera.position.z = Math.sin(timer) * 50
-    @camera.position.y = 50
+    @camera.position.x = Math.cos(timer) * 100
+    @camera.position.z = Math.sin(timer) * 100
+    @camera.position.y = 100
     @camera.lookAt(@scene.position)
     
     # cube.rotation.y += 0.05;
@@ -131,15 +141,20 @@ class Connection
         # console.log fr.result.byteLength
 
         ary = new Int32Array(fr.result)
-        # console.log "id: " + ary[0].toString(16)
+        id = ary[0].toString(16)
 
         f = 1.0
         
+        if r.hasObject(id)
+          obj = r.objects[id]
+        else
+          obj = r.addObject(id)
+          
         ary = new Float32Array(fr.result)
-        r.cube.position = new THREE.Vector3(ary[1], ary[2], ary[3])
-        r.cube.rotation = new THREE.Vector3(ary[4], ary[5], ary[6])
+        obj.position = new THREE.Vector3(ary[1], ary[2], ary[3])
+        # r.cube.rotation = new THREE.Vector3(ary[4], ary[5], ary[6])
         # console.log r.cube.rotation
-        # r.cube.quaternion = new THREE.Quaternion(ary[4] / f, ary[5] / f, ary[6] / f, ary[7] / f)
+        obj.quaternion = new THREE.Quaternion(ary[4] / f, ary[5] / f, ary[6] / f, ary[7] / f)
         # r.cube.quaternion.normalize()
         
         # console.log(position)

@@ -16,8 +16,14 @@ function World.create()
 end
 
 function World:reset()
-  print "resetting the world..."
+  -- print "resetting the world..."
   lua_world_reset()
 end
+
+function World:addChild()
+  -- print "resetting the world..."
+  lua_world_add_child()
+end
+
 
 world = World.create()
