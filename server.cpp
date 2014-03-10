@@ -133,15 +133,6 @@ static struct libwebsocket_protocols protocols[] = {
   { NULL, NULL, 0 }
 };
 
-static struct option options[] = {
-	{ "help",	no_argument,		NULL, 'h' },
-	{ "debug",	required_argument,	NULL, 'd' },
-	{ "port",	required_argument,	NULL, 'p' },
-	{ "ssl",	no_argument,		NULL, 's' },
-	{ "interface",  required_argument,	NULL, 'i' },
-	{ NULL, 0, 0, 0 }
-};
-
 void report_errors(lua_State *L, int status)
 {
   if ( status!=0 ) {
@@ -212,7 +203,6 @@ int main(int argc, char **argv)
 	info.protocols = protocols;
 	info.gid = -1;
 	info.uid = -1;
-	// info.options = opts;
   info.user = NULL; // (void *) new User;
   
 	// context = libwebsocket_context(&info);
