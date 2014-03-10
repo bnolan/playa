@@ -12,7 +12,9 @@
 #include <assert.h>
 #include <bullet/btBulletDynamicsCommon.h>
 // #include "build/libwebsockets/lib/private-libwebsockets.h"
+
 #include "world.h"
+#include "user.h"
 
 extern "C" {
 #include "build/libwebsockets/lib/libwebsockets.h"
@@ -21,7 +23,8 @@ extern "C" {
 #include <lauxlib.h>
 }
 
-#include "user.cpp"
+
+World *world;
 
 #define MAX_ECHO_PAYLOAD 1400
 #define LOCAL_RESOURCE_PATH INSTALL_DATADIR"/libwebsockets-test-server"
@@ -30,26 +33,17 @@ int force_exit = 0;
 int user_id = 1;
 lua_State *L;
 
-class Object{
-  std::string modelUrl;
-  btRigidBody body;
-  LuaState *L;
-  
-  void onTouch(User sender){
-    if LuaHasFunction("touch"){
-      lua.call("touch", sender)
-    }
-  }
-  
-  
-  
-};
-
-struct per_session_data__echo {
-	unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + MAX_ECHO_PAYLOAD + LWS_SEND_BUFFER_POST_PADDING];
-	unsigned int len;
-	unsigned int index;
-};
+// class Object{
+//   std::string modelUrl;
+//   btRigidBody body;
+//   LuaState *L;
+//   
+//   void onTouch(User sender){
+//     if LuaHasFunction("touch"){
+//       lua.call("touch", sender)
+//     }
+//   }
+// };
 
 struct per_session_data {
   User *user;
@@ -71,7 +65,7 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
 	switch (reason) {
 
   case LWS_CALLBACK_ESTABLISHED:{
-    asset(session->user == NULL);
+    assert(session->user == NULL);
     session->user = new User(user_id++);
     std::cout << "User #" << session->user->id_ << " connected..." << std::endl;
     break;
@@ -133,16 +127,8 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
 
 
 static struct libwebsocket_protocols protocols[] = {
-	/* first protocol must always be HTTP handler */
-
-	{
-		"default",		/* name */
-		callback_echo,		/* callback */
-		sizeof(struct per_session_data)	/* per_session_data_size */
-	},
-	{
-		NULL, NULL, 0		/* End of list */
-	}
+  { "default", callback_echo, sizeof(struct per_session_data) },
+  { NULL, NULL, 0 }
 };
 
 static struct option options[] = {
@@ -161,6 +147,25 @@ void report_errors(lua_State *L, int status)
     lua_pop(L, 1); // remove error message
   }
 }
+
+int lua_world_reset(lua_State *L)
+{
+  // int argc = lua_gettop(L);
+  // 
+  // std::cerr << "-- my_function() called with " << argc
+  //   << " arguments:" << std::endl;
+  // 
+  // for ( int n=1; n<=argc; ++n ) {
+  //   std::cerr << "-- argument " << n << ": "
+  //     << lua_tostring(L, n) << std::endl;
+  // }
+  //
+  // lua_pushnumber(L, 123); // return value
+  world->reset();
+
+  return 0; // number of return values
+}
+
 
 int main(int argc, char **argv)
 {
@@ -205,7 +210,7 @@ int main(int argc, char **argv)
 	info.protocols = protocols;
 	info.gid = -1;
 	info.uid = -1;
-	info.options = opts;
+	// info.options = opts;
   info.user = NULL; // (void *) new User;
   
 	// context = libwebsocket_context(&info);
@@ -218,7 +223,7 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, sighandler);
 
-  World *world = new World;
+  world = new World;
   world->addGround();
   world->addObject();
   
@@ -227,6 +232,8 @@ int main(int argc, char **argv)
   L = luaL_newstate();
 
   luaL_openlibs(L);
+
+  lua_register(L, "lua_world_reset", lua_world_reset);
 
   // luaopen_io(L); // provides io.*
   // luaopen_base(L);
@@ -249,7 +256,10 @@ int main(int argc, char **argv)
 	while (!force_exit) { // }!force_exit) { // n >= 0 && !force_exit) {
 		struct timeval tv;
 
-    // world->simulate();
+    world->simulate();
+    
+    
+    world->update();
     
     // if (client) {
     //  gettimeofday(&tv, NULL);

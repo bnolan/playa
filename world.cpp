@@ -36,8 +36,8 @@ void World::addObject(){
   info.m_restitution = 0.9f;
   // info.m_friction = 0.5f;
 
-  btRigidBody* body = new btRigidBody(info);
-  dynamics_world_->addRigidBody(body);
+  std::shared_ptr<btRigidBody> body(new btRigidBody(info));
+  dynamics_world_->addRigidBody(body.get());
   objects_.push_back(body);
 
   // fall_rigid_body_->applyTorqueImpulse(btVector3(1.0f,1.0f,0)); //Just to try and get it to rotate
@@ -69,14 +69,13 @@ void World::simulate(){
   // update.rY = pitch;
   // update.rZ = roll;
 
-  //std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
   // std::cout << "rotation: " << update.rX << "," << update.rY << "," << update.rZ << "," << update.rW << std::endl;
 }
 
-std::list<UpdatePacket> World::update(){
-  std::list<UpdatePacket> result;
+std::vector<UpdatePacket> World::update(){
+  std::vector<UpdatePacket> result;
   
-  for(btRigidBody* object : objects_){
+  for(std::shared_ptr<btRigidBody> object : objects_){
     UpdatePacket update;
   
     btTransform trans;
@@ -87,6 +86,8 @@ std::list<UpdatePacket> World::update(){
     update.pY = trans.getOrigin().getY();
     update.pZ = trans.getOrigin().getZ();
 
+    std::cout << "height: " << trans.getOrigin().getY() << std::endl;
+
     update.rX = trans.getRotation().getX();
     update.rY = trans.getRotation().getY();
     update.rZ = trans.getRotation().getZ();
@@ -96,4 +97,18 @@ std::list<UpdatePacket> World::update(){
   }
   
   return result;
+}
+
+void World::reset(){
+  for(std::shared_ptr<btRigidBody> object : objects_){
+    btTransform tr;
+    tr.setIdentity();
+    tr.setOrigin(btVector3(0,100,0));
+  
+    btQuaternion quat;
+    quat.setEuler(0,1.57,1.57);
+    tr.setRotation(quat);
+  
+    object->setCenterOfMassTransform(tr);
+  }
 }

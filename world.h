@@ -1,7 +1,8 @@
 #pragma once
 
-#include <list>
+#include <vector>
 #include <iostream>
+#include <memory>
 #include <bullet/btBulletDynamicsCommon.h>
 
 struct UpdatePacket {
@@ -18,14 +19,15 @@ public:
   btSequentialImpulseConstraintSolver* solver_;
   btCollisionDispatcher* dispatcher_;
   btDefaultCollisionConfiguration* collision_configuration_;
-  // btRigidBody* fall_rigid_body_;
 
-  std::list<btRigidBody*> objects_;
+  std::vector<std::shared_ptr<btRigidBody>> objects_;
+  // std::vector<shared_ptr<User>> users_;
   
   World();
   void addGround();
   void addObject();
   void simulate();
-  std::list<UpdatePacket> update();
+  void reset();
+  std::vector<UpdatePacket> update();
 };
   
