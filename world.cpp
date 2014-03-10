@@ -57,7 +57,7 @@ void World::simulate(){
   // simulate at half realtime.
   dynamics_world_->stepSimulation(1/20.f,10);
   // dynamics_world_->stepSimulation(1/60.f,10);
-  
+
   // btScalar yaw, pitch, roll;
   // btMatrix3x3 mat = btMatrix3x3(trans.getRotation());
   // mat.getEulerYPR(yaw, pitch, roll);

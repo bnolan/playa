@@ -93,6 +93,10 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
     //  lwsl_err("Partial write\n");
     //  return -1;
     // }
+    
+    std::vector<UpdatePacket> updates = world->update();
+    
+    
     break;
 	}
 
@@ -169,7 +173,6 @@ int main(int argc, char **argv)
 	int opts = 0;
 	char interface_name[128] = "";
 	const char *interface = NULL;
-	int syslog_options = LOG_PID | LOG_PERROR;
 	int client = 0;
 	int listen_port;
 	struct lws_context_creation_info info;
@@ -185,7 +188,7 @@ int main(int argc, char **argv)
 
   // websockets stuff...
 	setlogmask(LOG_UPTO (LOG_DEBUG));
-	openlog("lwsts", syslog_options, LOG_DAEMON);
+	// openlog("lwsts", syslog_options, LOG_DAEMON);
 	lws_set_log_level(debug_level, lwsl_emit_syslog);
 
 	listen_port = port;
@@ -241,9 +244,6 @@ int main(int argc, char **argv)
 		struct timeval tv;
 
     world->simulate();
-    
-    
-    world->update();
     
     // if (client) {
     //  gettimeofday(&tv, NULL);
