@@ -183,20 +183,12 @@ int main(int argc, char **argv)
 
 	memset(&info, 0, sizeof info);
 
-	lwsl_notice("Built to support server operations\n");
-
-	/* we will only try to log things according to our debug_level */
+  // websockets stuff...
 	setlogmask(LOG_UPTO (LOG_DEBUG));
 	openlog("lwsts", syslog_options, LOG_DAEMON);
-
-	/* tell the library what debug level to emit and to send it to syslog */
 	lws_set_log_level(debug_level, lwsl_emit_syslog);
 
-	lwsl_notice("libwebsockets echo test - "
-			"(C) Copyright 2010-2013 Andy Green <andy@warmcat.com> - "
-						    "licensed under LGPL2.1\n");
-		lwsl_notice("Running in server mode\n");
-		listen_port = port;
+	listen_port = port;
 
 	info.port = listen_port;
 	info.iface = interface;
@@ -264,6 +256,13 @@ int main(int argc, char **argv)
 
     libwebsocket_callback_on_writable_all_protocol(&protocols[0]);
 		libwebsocket_service(context, 10);
+
+    // 10fps
+    #ifdef _WIN32
+      Sleep(100);
+    #else
+      usleep(100000);
+    #endif
 	}
 
   report_errors(L, s);

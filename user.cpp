@@ -1,3 +1,5 @@
+#include "user.h"
+
 User::User(int id){
   id_ = id;
   name_ = "parzival";
