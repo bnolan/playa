@@ -21,13 +21,12 @@ void World::addGround(){
 }
   
 void World::addObject(){
-  btCollisionShape* fallShape = new btBoxShape(btVector3(1,1,1));
+  btCollisionShape* fallShape = new btBoxShape(btVector3(5,5,5));
 
   btQuaternion quat(0,0,0,1);
-  quat.setEuler(1.57f,1.57f,1.57f);
+  quat.setEuler(0,0,0);
 
-  btDefaultMotionState* fallMotionState =
-          new btDefaultMotionState(btTransform(quat,btVector3(0,100,0)));
+  btDefaultMotionState* fallMotionState = new btDefaultMotionState(btTransform(quat,btVector3(0,0,0)));
   btScalar mass = 1.0f;
   btVector3 fallInertia(0,0,0);
   fallShape->calculateLocalInertia(mass,fallInertia);
@@ -55,7 +54,7 @@ void World::addObject(){
   
 void World::simulate(){
   // simulate at half realtime.
-  dynamics_world_->stepSimulation(1/10.0f,10.0f);
+  dynamics_world_->stepSimulation(1/10.0f,20.0f);
   // dynamics_world_->stepSimulation(1/60.f,10);
 
   // btScalar yaw, pitch, roll;
@@ -98,10 +97,10 @@ void World::reset(){
   for(std::shared_ptr<btRigidBody> object : objects_){
     btTransform tr;
     tr.setIdentity();
-    tr.setOrigin(btVector3(0,100,0));
+    tr.setOrigin(btVector3(0,0,0));
   
     btQuaternion quat;
-    quat.setEuler(0,1.57f,1.57f);
+    quat.setEuler(0,0,0);
     tr.setRotation(quat);
   
     object->setCenterOfMassTransform(tr);
