@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <unistd.h>
 #include <getopt.h>
-#include <string.h>
 #include <sys/time.h>
+#include <syslog.h>
+#endif
+#include <string.h>
 #include <assert.h>
 #include <stdint.h>
-#include <syslog.h>
 #include <signal.h>
 #include <iostream>
 #include <assert.h>
@@ -17,7 +19,7 @@
 #include "user.h"
 
 extern "C" {
-#include "build/libwebsockets/lib/libwebsockets.h"
+#include "libwebsockets/lib/libwebsockets.h"
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
