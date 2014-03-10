@@ -18,8 +18,10 @@
 #include "world.h"
 #include "user.h"
 
-extern "C" {
+#include "libwebsockets/build/lws_config.h"
 #include "libwebsockets/lib/libwebsockets.h"
+
+extern "C" {
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
