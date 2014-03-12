@@ -56,13 +56,21 @@ class Renderer
     plane.receiveShadow = true
     @scene.add(plane)
 
-    # loader = new THREE.ColladaLoader()
-    # loader.load './models/cheetah.dae',  (result) =>
-    #   console.log result
-    #   @model = result.scene
-    #   @model.scale.x = @model.scale.y = @model.scale.z = 2
-    #   # @model.material.overdraw = true
-    #   # @scene.add(@model)
+    loader = new THREE.ColladaLoader()
+    loader.load './models/tree.dae',  (result) =>
+      # otherwise castshadow doesn't work... :/
+      @model = result.scene.children[0].children[0]
+      @model.scale.x = @model.scale.y = @model.scale.z = 10
+      @model.castShadow = true
+      @model.receiveShadow = false
+      @scene.add(@model)
+
+    @avatar = new Skin(THREE, '/skins/slenderman.png')
+    @avatar.mesh.position.y = 0
+    @avatar.mesh.position.z = 10
+    @avatar.mesh.scale.x = @avatar.mesh.scale.y = @avatar.mesh.scale.z = 0.5
+    # @avatar.mesh.castShadow = true
+    @scene.add(@avatar.mesh)
 
     @webglRenderer = new THREE.WebGLRenderer()
     @webglRenderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -84,22 +92,26 @@ class Renderer
     cube.position.x = 0
     cube.position.y = 10
     cube.position.z = 0
-    cube.useQuaternion = true
+    # cube.useQuaternion = true
     @scene.add(cube)
     
     @objects[id] = cube
     
     cube
 
+  removeObject: (object) ->
+    @scene.remove(object)
+    delete @objects[object.id]
+    
   hasObject: (id) ->
     !!@objects[id]
     
   animate: =>
     timer = Date.now() * 0.0005
     
-    if @model
-      @model.rotation.x = -Math.PI / 2
-      @model.rotation.z += 0.1
+    # if @model
+    #   @model.rotation.x = -Math.PI / 2
+    #   @model.rotation.z += 0.1
     
     @camera.position.x = Math.cos(timer) * 100
     @camera.position.z = Math.sin(timer) * 100
@@ -108,7 +120,12 @@ class Renderer
     
     # cube.rotation.y += 0.05;
     requestAnimationFrame(@animate)
+
+    stats.begin()
+
     @render()
+
+    stats.end()
   
   render: =>
     @camera.lookAt(@scene.position)
@@ -119,7 +136,14 @@ class Connection
   constructor: ->
     console.log "Connecting..."
     
-    @ws = new WebSocket("ws://127.0.0.1:7681/", "default");
+    host = window.location.host.split(":")[0]
+    
+    @stopProcessing = false
+
+    @ws = new WebSocket("ws://#{host}:7681/", "default");
+    
+    @ws.binaryType = 'arraybuffer'
+    
     @ws.onopen = =>
       console.log "Opened!"
       @ws.send "Hello World!"
@@ -128,19 +152,52 @@ class Connection
       console.log "Closed!"
       
     @ws.onmessage = @onMessage
+  
+  toHex: (i) ->
+    r = parseInt(i).toString(16)
+    if r.length == 1
+      r = "0#{r}"
+    r
     
   onMessage: (e) =>
     # that.messageCountStats.accumulate(1);
     # messageCount++;
 
-    if e.data && e.data instanceof Blob
+    if @stopProcessing
+      return
+
+    littleE = true # little endian?
+    
+    if e.data && e.data instanceof ArrayBuffer
+      # console.log e.data
+      view = new DataView(e.data, 0, e.data.length)
+
+      id = view.getUint32(0, littleE).toString(16)
+      type = view.getUint8(4)
+
+      obj = if r.hasObject(id)
+        r.objects[id]
+      else
+        r.addObject(id)
+        
+      if type == 0x20
+        r.removeObject(obj)
+      else if type = 0x10
+        # ary = new Float32Array(e.data.slice(8,32))
+        # obj.position = new THREE.Vector3(ary[0], ary[1], ary[2])
+        obj.position = new THREE.Vector3(view.getFloat32(8, littleE), view.getFloat32(12, littleE), view.getFloat32(16, littleE))
+        # obj.quaternion = new THREE.Quaternion(ary[4] / f, ary[5] / f, ary[6] / f, ary[7] / f)
+      
+      
+      
+    else if e.data && e.data instanceof Blob
       # console.log "Got a blob..."
 
       fr = new FileReader()
-      fr.onload = (f) ->
+      fr.onload = (f) =>
         # console.log fr.result.byteLength
-
-        ary = new Int32Array(fr.result)
+          
+        ary = new UInt32Array(fr.result)
         id = ary[0].toString(16)
 
         f = 1.0
@@ -148,6 +205,7 @@ class Connection
         if r.hasObject(id)
           obj = r.objects[id]
         else
+          console.log "adding object..."
           obj = r.addObject(id)
           
         ary = new Float32Array(fr.result)
@@ -185,8 +243,18 @@ class Connection
     
     
     
-window.c = new Connection
+stats = new Stats();
+stats.setMode(0) # 0: fps, 1: ms
+
+# Align top-left
+stats.domElement.style.position = 'absolute';
+stats.domElement.style.left = '0px';
+stats.domElement.style.top = '0px';
+
+document.body.appendChild(stats.domElement)
+
 window.r = new Renderer
+window.c = new Connection
 window.ui = new UserInterface
 
 r.animate();

@@ -1,13 +1,15 @@
 <head>
   <script src="coffee-script.js"></script>
   <script src="jquery.js"></script>
-  <script src="three.js"></script>
+  <script src="three-r55.js"></script>
+  <script src="stats.js"></script>
   <script src="collada.js"></script>
+  <script src="minecraft-skin.js"></script>
   <script type="text/coffeescript" src="app.coffee"></script>
 </head>
 <body>
-  <form>
-    <input type="text" style="width: 50%" value="world.reset()" />
+  <form style="padding-left: 100px">
+    <input type="text" style="width: 50%" value="obj = Obj.create(); obj.position = Vector.create(0,0,0); world.addChild(obj)" />
     <input type="submit" />
   </form>
 </body>

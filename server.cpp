@@ -57,6 +57,13 @@ void sighandler(int sig){
 	force_exit = 1;
 }
 
+void hookRoutine(lua_State *L, lua_Debug *ar){
+  if(ar->event == LUA_HOOKCOUNT){
+    std::cout << "Over instructions budget..." << std::endl;
+    luaL_error(L, "Over instructions budget...");
+  }
+}
+
 static int callback_echo(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason, void *sessionPointer, void *in, size_t len){
 	//struct per_session_data__echo *pss = (struct per_session_data__echo *)user;
 	int n;
@@ -119,6 +126,7 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
     char *message = (char *)in;
     std::cout << message << std::endl;
 
+    lua_sethook(L, &hookRoutine, LUA_MASKCOUNT, 500);
     luaL_dostring(L, message);
     
     // printf("Message: %s\n", in);
@@ -134,7 +142,6 @@ static int callback_echo(struct libwebsocket_context *context,struct libwebsocke
 
 	return 0;
 }
-
 
 
 static struct libwebsocket_protocols protocols[] = {
@@ -168,8 +175,41 @@ int lua_world_reset(lua_State *L)
   return 0; // number of return values
 }
 
+/* assume that table is on the stack top */
+float getTableFloat (const char *key) {
+  float result;
+  lua_pushstring(L, key);
+  lua_gettable(L, -2);  /* get background[key] */
+  if (!lua_isnumber(L, -1))
+    std::cout << "invalid component in object table\n";
+    luaL_error(L, "invalid component in object table");
+  result = (float) lua_tonumber(L, -1);
+  lua_pop(L, 1);  /* remove number */
+  return result;
+}
+
 int lua_world_add_child(lua_State *L){
+  int argc = lua_gettop(L);
+
+  std::cout << "adding object to world" << std::endl;
+  
+  if(argc!=1){
+    std::cout << "invalid # of args\n";
+    return 0;
+  }else if(!lua_istable(L, -1)){
+    std::cout << "is not a table?\n";
+    return 0;
+    // luaL_error(L, "object is not an Object"); // ;)
+  }
+  
+  std::cout << "getting component..." << std::endl;
+  
+  float x = getTableFloat("position_x");
+  
+  std::cout << "x component is versichlich " << x << std::endl;
+
   world->addObject();
+  
   return 0;
 }
 
@@ -227,16 +267,16 @@ int main(int argc, char **argv)
   
   L = luaL_newstate();
 
-  luaL_openlibs(L);
+  // luaL_openlibs(L);
 
   lua_register(L, "lua_world_reset", lua_world_reset);
   lua_register(L, "lua_world_add_child", lua_world_add_child);
 
   // luaopen_io(L); // provides io.*
-  // luaopen_base(L);
-  // luaopen_table(L);
-  // luaopen_string(L);
-  // luaopen_math(L);
+  luaopen_base(L);
+  luaopen_table(L);
+  luaopen_string(L);
+  luaopen_math(L);
   // luaopen_loadlib(L);
 
   std::cerr << "-- Loading file: " << file << std::endl;

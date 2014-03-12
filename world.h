@@ -8,10 +8,14 @@
 
 
 struct UpdatePacket {
-  int32_t id;
+  uint32_t id;
+  uint8_t type;
+  uint8_t family;
+  uint8_t instruction;
+  uint8_t parameter;
   float pX,pY,pZ;
   float rX,rY,rZ,rW;
-};
+} __attribute__((packed));
 
 class World{
 

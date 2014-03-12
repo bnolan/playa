@@ -1,5 +1,6 @@
 #include "world.h"
 //#include <unistd.h>
+#include <ctime>
 
 World::World(){
   broadphase_ = new btDbvtBroadphase();
@@ -19,13 +20,35 @@ void World::addGround(){
   btRigidBody* groundRigidBody = new btRigidBody(info);
   dynamics_world_->addRigidBody(groundRigidBody);
 }
-  
+
+uint32_t world_id = 0xF00;
+
 class Object{
 public:
-  unsigned int id;
+  unsigned int id_;
+  int dead_;
+  time_t killed_at_;
   
   Object(){
-    id = rand();
+    id_ = world_id++;
+    dead_ = false;
+  }
+  
+  int is_dead(){
+    return dead_;
+  }
+  
+  void kill(){
+    dead_ = true;
+    time(&killed_at_);
+  }
+  
+  int ready_to_reap(){
+    time_t now;
+    time(&now);
+    
+    // older than a minute? reap that suckah.
+    return killed_at_ - now > 60 * 1000;
   }
 };
 
@@ -85,18 +108,29 @@ std::vector<UpdatePacket> World::update(){
     UpdatePacket update;
   
     Object *o = reinterpret_cast<Object *>(object->getUserPointer());
-    update.id = o->id;
+    update.id = o->id_;
+    
+    if(o->is_dead()){
+      update.type = 0x20;
+    }else{
+      update.type = 0x10;
+    }
 
     btTransform trans;
     object->getMotionState()->getWorldTransform(trans);
     update.pX = trans.getOrigin().getX();
     update.pY = trans.getOrigin().getY();
     update.pZ = trans.getOrigin().getZ();
-    // std::cout << "y coordinate.." << trans.getOrigin().getY() << std::endl;
     update.rX = trans.getRotation().getX();
     update.rY = trans.getRotation().getY();
     update.rZ = trans.getRotation().getZ();
     update.rW = trans.getRotation().getW();
+
+    // uint8_t *buffer = (uint8_t *) &update;
+    // for(int i=0;i<sizeof(UpdatePacket);i++){
+    //   printf("%02X", buffer[i]);
+    // }
+    //printf("\n");
     
     result.push_back(update);
   }
@@ -105,17 +139,24 @@ std::vector<UpdatePacket> World::update(){
 }
 
 void World::reset(){
-  for(std::shared_ptr<btRigidBody> object : objects_){
-    // std::cout << "Reseting.. " << object.get() << std::endl;
+  for(std::shared_ptr<btRigidBody> obj : objects_){
+    dynamics_world_->removeCollisionObject(obj.get());
     
-    btTransform tr;
-    tr.setIdentity();
-    tr.setOrigin(btVector3(0,50.0f,0));
-  
-    btQuaternion quat;
-    quat.setEuler(0,0,0);
-    tr.setRotation(quat);
-  
-    object->setCenterOfMassTransform(tr);
+    Object *o = reinterpret_cast<Object *>(obj->getUserPointer());
+    o->kill();
   }
+  
+  // objects_.clear();
+        
+  // std::cout << "Reseting.. " << object.get() << std::endl;
+  // 
+  // btTransform tr;
+  // tr.setIdentity();
+  // tr.setOrigin(btVector3(0,50.0f,0));
+  // 
+  // btQuaternion quat;
+  // quat.setEuler(0,0,0);
+  // tr.setRotation(quat);
+  // 
+  // object->setCenterOfMassTransform(tr);
 }
