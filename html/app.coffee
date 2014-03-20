@@ -49,7 +49,7 @@ class Renderer
     ambientLight = new THREE.AmbientLight(0x111111)
     @scene.add(ambientLight)
 
-    groundMaterial = new THREE.MeshBasicMaterial({ color: 0x003388 })
+    groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa })
     plane = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), groundMaterial)
     plane.rotation.x = -Math.PI / 2
     plane.position.y = -1
@@ -59,11 +59,11 @@ class Renderer
     loader = new THREE.ColladaLoader()
     loader.load './models/tree.dae',  (result) =>
       # otherwise castshadow doesn't work... :/
-      @model = result.scene.children[0].children[0]
-      @model.scale.x = @model.scale.y = @model.scale.z = 10
-      @model.castShadow = true
-      @model.receiveShadow = false
-      @scene.add(@model)
+      model = result.scene.children[0].children[0]
+      model.scale.x = model.scale.y = model.scale.z = 10
+      model.castShadow = true
+      model.receiveShadow = false
+      @scene.add(model)
 
     @avatar = new Skin(THREE, '/skins/slenderman.png')
     @avatar.mesh.position.y = 0
@@ -82,6 +82,19 @@ class Renderer
     document.body.appendChild(container)
     container.appendChild(@webglRenderer.domElement)
     # window.addEventListener('resize', onWindowResize, false)
+    
+    @addStats()
+    
+  addStats: ->
+    @stats = new Stats();
+    @stats.setMode(0) # 0: fps, 1: ms
+
+    # Align top-left
+    @stats.domElement.style.position = 'absolute';
+    @stats.domElement.style.left = '0px';
+    @stats.domElement.style.top = '0px';
+
+    document.body.appendChild(@stats.domElement)
 
   addObject: (id) ->
     boxgeometry = new THREE.CubeGeometry(10, 10, 10);
@@ -113,22 +126,20 @@ class Renderer
     #   @model.rotation.x = -Math.PI / 2
     #   @model.rotation.z += 0.1
     
-    @camera.position.x = Math.cos(timer) * 100
-    @camera.position.z = Math.sin(timer) * 100
-    @camera.position.y = 100
-    @camera.lookAt(@scene.position)
+    # @camera.position.x = Math.cos(timer) * 100
+    # @camera.position.z = Math.sin(timer) * 100
+    # @camera.position.y = 100
+    # @camera.lookAt(@scene.position)
     
     # cube.rotation.y += 0.05;
     requestAnimationFrame(@animate)
 
-    stats.begin()
-
+    @stats.begin()
     @render()
-
-    stats.end()
+    @stats.end()
   
   render: =>
-    @camera.lookAt(@scene.position)
+    # @camera.lookAt(@scene.position)
     @webglRenderer.render(@scene, @camera)
 
 
@@ -242,19 +253,62 @@ class Connection
       # };
     
     
+class Game
+  constructor: (renderer) ->
+    @keyboard = new KeyboardState
+    @renderer = renderer
+
+    element = document.body
+
+    document.addEventListener( 'pointerlockchange', @pointerlockchange, false )
+    document.addEventListener( 'mozpointerlockchange', @pointerlockchange, false )
+    document.addEventListener( 'webkitpointerlockchange', @pointerlockchange, false )
+
+    element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock
+    element.requestPointerLock()
+
+    controls = new THREE.PointerLockControls(@renderer.camera)
+    @renderer.scene.add(controls.getObject())
     
-stats = new Stats();
-stats.setMode(0) # 0: fps, 1: ms
+    setInterval(@tick, 1000/20)
 
-# Align top-left
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.left = '0px';
-stats.domElement.style.top = '0px';
+  pointerlockchange: (event) ->
+    # if (document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element)
+      # controls.enabled = true;
+      # blocker.style.display = 'none';
+    # else
+      # controls.enabled = false
+      # blocker.style.display = '-webkit-box';
+      # blocker.style.display = '-moz-box';
+      # blocker.style.display = 'box';
+      # instructions.style.display = '';
+    
+  tick: =>
+    d = 4.0
 
-document.body.appendChild(stats.domElement)
+    @keyboard.update();
+    
+    if ( @keyboard.pressed("A") )
+      @renderer.avatar.mesh.translateX(-d)
 
+    if ( @keyboard.pressed("D") )
+      @renderer.avatar.mesh.translateX(d)
+    
+    if ( @keyboard.pressed("W") )
+      @renderer.avatar.mesh.translateZ(d)
+
+    if ( @keyboard.pressed("S") )
+      @renderer.avatar.mesh.translateZ(-d)
+
+    @renderer.camera.position = @renderer.avatar.mesh.position.clone()
+    @renderer.camera.translateY(20) # .set(0,150,150)
+    @renderer.camera.lookAt(new THREE.Vector3(0,15,0)) # r.scene.position.clone().translateY(20))
+    
 window.r = new Renderer
 window.c = new Connection
+window.g = new Game(r)
 window.ui = new UserInterface
+# window.clock = new THREE.Clock
+
 
 r.animate();
