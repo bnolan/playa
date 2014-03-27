@@ -26,6 +26,13 @@ class Renderer
     @scene = new THREE.Scene()
     @camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR)
     @scene.add(@camera)
+    
+    @scene.fog = new THREE.FogExp2( 0xcccccc, 0.0025 )
+
+    # material = new THREE.MeshBasicMaterial({ color: 0xdddddd })
+    # skyboxMesh = new THREE.Mesh( new THREE.CubeGeometry( 1000, 1000, 1000, 1, 1, 1, null, true ), material )
+    # @scene.addObject(skyboxMesh)
+		
 
     @camera.position.set(0,150,150)
     @camera.lookAt(@scene.position)
@@ -49,7 +56,7 @@ class Renderer
     ambientLight = new THREE.AmbientLight(0x111111)
     @scene.add(ambientLight)
 
-    groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa })
+    groundMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 })
     plane = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), groundMaterial)
     plane.rotation.x = -Math.PI / 2
     plane.position.y = -1
@@ -63,7 +70,13 @@ class Renderer
       model.scale.x = model.scale.y = model.scale.z = 10
       model.castShadow = true
       model.receiveShadow = false
-      @scene.add(model)
+      
+      for i in [1..10]
+        m = model.clone()
+        m.position.x = Math.random() * 500 - 250
+        m.position.z = Math.random() * 500 - 250
+        m.position.y = -1
+        @scene.add(m)
 
     @avatar = new Skin(THREE, '/skins/slenderman.png')
     @avatar.mesh.position.y = 0
@@ -72,7 +85,7 @@ class Renderer
     # @avatar.mesh.castShadow = true
     @scene.add(@avatar.mesh)
 
-    @webglRenderer = new THREE.WebGLRenderer()
+    @webglRenderer = new THREE.WebGLRenderer( { alpha : true })
     @webglRenderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT)
     @webglRenderer.domElement.style.position = "relative"
     @webglRenderer.shadowMapEnabled = true
@@ -270,7 +283,7 @@ class Game
     controls = new THREE.PointerLockControls(@renderer.camera)
     @renderer.scene.add(controls.getObject())
     
-    setInterval(@tick, 1000/20)
+    setInterval(@tick, 1000/60)
 
   pointerlockchange: (event) ->
     # if (document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element)
@@ -303,12 +316,11 @@ class Game
     @renderer.camera.position = @renderer.avatar.mesh.position.clone()
     @renderer.camera.translateY(20) # .set(0,150,150)
     @renderer.camera.lookAt(new THREE.Vector3(0,15,0)) # r.scene.position.clone().translateY(20))
-    
-window.r = new Renderer
-window.c = new Connection
-window.g = new Game(r)
-window.ui = new UserInterface
-# window.clock = new THREE.Clock
 
-
-r.animate();
+jQuery ->
+  window.r = new Renderer
+  window.c = new Connection
+  window.g = new Game(r)
+  window.ui = new UserInterface
+  # window.clock = new THREE.Clock
+  r.animate();
